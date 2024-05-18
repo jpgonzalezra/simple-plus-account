@@ -80,60 +80,62 @@ contract SimplePlusAccount is SimpleAccount, IERC1271, EIP712 {
     *   "Ethereum Signed Message" envelope before checking the signature for the EOA-owner case.
     */
     function isValidSignature(bytes32 hash, bytes calldata _signature) public view virtual returns (bytes4) {
-        if (_signature.length == 0) {
-            revert InvalidSignatureType();
-        }
-
-        bytes32 structHash = keccak256(abi.encode(_MESSAGE_TYPEHASH, keccak256(abi.encode(hash))));
-        bytes32 replaySafeHash = MessageHashUtils.toTypedDataHash(_domainSeparatorV4(), structHash);
-
-        bytes memory signature = _signature[1:];
-        uint8 signatureType = uint8(_signature[0]);
-        if (signatureType == uint8(SignatureType.EOA)) {
-            return _validateEOASignature(replaySafeHash, signature) == SIG_VALIDATION_SUCCESS
-                ? this.isValidSignature.selector
-                : bytes4(0xffffffff);
-        } else if (signatureType == uint8(SignatureType.CONTRACT)) {
-            return _validateContractSignature(replaySafeHash, signature) == SIG_VALIDATION_SUCCESS
-                ? this.isValidSignature.selector
-                : bytes4(0xffffffff);
-        }
-
+    if (_signature.length == 0) {
         revert InvalidSignatureType();
     }
 
-    function _validateSignature(
-        PackedUserOperation calldata userOp,
-        bytes32 userOpHash
-    )
-        internal
-        virtual
-        override
-        returns (uint256 validationData)
-    {
-        bytes memory signature = userOp.signature[1:];
-        if (signature.length == 0) {
-            revert InvalidSignatureType();
-        }
+    bytes32 structHash = keccak256(abi.encode(_MESSAGE_TYPEHASH, keccak256(abi.encode(hash))));
+    bytes32 replaySafeHash = MessageHashUtils.toTypedDataHash(_domainSeparatorV4(), structHash);
 
-        uint8 signatureType = uint8(userOp.signature[0]);
-        if (signatureType == uint8(SignatureType.EOA)) {
-            return _validateEOASignature(userOpHash.toEthSignedMessageHash(), signature);
-        } else if (signatureType == uint8(SignatureType.CONTRACT)) {
-            return _validateContractSignature(userOpHash, signature);
-        }
+    return _validateSignatureWithType(uint8(_signature[0]), replaySafeHash, _signature[1:])
+        ? this.isValidSignature.selector
+        : bytes4(0xffffffff);
+}
 
+function _validateSignature(
+    PackedUserOperation calldata userOp,
+    bytes32 userOpHash
+)
+    internal
+    virtual
+    override
+    returns (uint256 validationData)
+{
+    if (userOp.signature.length == 0) {
         revert InvalidSignatureType();
     }
 
-    function _validateEOASignature(bytes32 hash, bytes memory signature) private view returns (uint256) {
-        address recovered = hash.recover(signature);
-        return recovered == owner ? SIG_VALIDATION_SUCCESS : SIG_VALIDATION_FAILED;
-    }
+    return _validateSignatureWithType(uint8(userOp.signature[0]), userOpHash.toEthSignedMessageHash(), userOp.signature[1:])
+        ? SIG_VALIDATION_SUCCESS
+        : SIG_VALIDATION_FAILED;
+}
 
-    function _validateContractSignature(bytes32 userOpHash, bytes memory signature) private view returns (uint256) {
-        return SignatureChecker.isValidERC1271SignatureNow(owner, userOpHash, signature)
-            ? SIG_VALIDATION_SUCCESS
-            : SIG_VALIDATION_FAILED;
+function _validateSignatureWithType(
+    uint8 signatureType,
+    bytes32 hash,
+    bytes memory signature
+)
+    private
+    view
+    returns (bool)
+{
+    if (signatureType == uint8(SignatureType.EOA)) {
+        return _validateEOASignature(hash, signature) == SIG_VALIDATION_SUCCESS;
+    } else if (signatureType == uint8(SignatureType.CONTRACT)) {
+        return _validateContractSignature(hash, signature) == SIG_VALIDATION_SUCCESS;
+    } else {
+        revert InvalidSignatureType();
     }
+}
+
+function _validateEOASignature(bytes32 hash, bytes memory signature) private view returns (uint256) {
+    address recovered = hash.recover(signature);
+    return recovered == owner ? SIG_VALIDATION_SUCCESS : SIG_VALIDATION_FAILED;
+}
+
+function _validateContractSignature(bytes32 userOpHash, bytes memory signature) private view returns (uint256) {
+    return SignatureChecker.isValidERC1271SignatureNow(owner, userOpHash, signature)
+        ? SIG_VALIDATION_SUCCESS
+        : SIG_VALIDATION_FAILED;
+}
 }
