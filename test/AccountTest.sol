@@ -53,4 +53,21 @@ contract AccountTest is Test {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, digest);
         return abi.encodePacked(r, s, v);
     }
+
+    function getMessageHash(address account, bytes memory message) public view returns (bytes32) {
+        bytes32 structHash = keccak256(abi.encode(keccak256("SimplePlusAccount(bytes message)"), keccak256(message)));
+        return keccak256(abi.encodePacked("\x19\x01", domainSeparator(account), structHash));
+    }
+
+    function domainSeparator(address account) internal view returns (bytes32) {
+        return keccak256(
+            abi.encode(
+                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+                keccak256(bytes("SimplePlusAccount")),
+                keccak256(bytes("1")),
+                block.chainid,
+                account
+            )
+        );
+    }
 }
