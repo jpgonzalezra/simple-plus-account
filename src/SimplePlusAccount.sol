@@ -8,7 +8,7 @@ import { SignatureChecker } from "@openzeppelin/contracts/utils/cryptography/Sig
 import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import { IERC1271 } from "@openzeppelin/contracts/interfaces/IERC1271.sol";
-import { EIP712 } from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
+import { EIP712 } from "@openzeppelin/contracts/utils/cryptography/EIP712.sol"; // TODO: use upgradable version
 
 contract SimplePlusAccount is SimpleAccount, IERC1271, EIP712 {
     using ECDSA for bytes32;
@@ -24,8 +24,7 @@ contract SimplePlusAccount is SimpleAccount, IERC1271, EIP712 {
     // @notice Signature types used for user operation validation and ERC-1271 signature validation.
     enum SignatureType {
         EOA,
-        CONTRACT,
-        CONTRACT_WITH_ADDR
+        CONTRACT
     }
 
     error InvalidOwner(address newOwner);
