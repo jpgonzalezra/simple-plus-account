@@ -26,6 +26,9 @@ contract SimplePlusAccountTest is AccountTest {
         vm.deal(address(account), 1 << 128);
     }
 
+    /**
+     * transferOwnership test cases
+     */
     function testOwnerCanTransferOwnership() public {
         _transferOwnership(eoaAddress, address(0x100));
     }
@@ -80,6 +83,18 @@ contract SimplePlusAccountTest is AccountTest {
         vm.prank(eoaAddress);
         vm.expectRevert(abi.encodeWithSelector(SimplePlusAccount.InvalidOwner.selector, (address(account))));
         account.transferOwnership(address(account));
+    }
+
+    /**
+     * IsValidSignature test cases
+     */
+    function testIsValidSignatureForEoaOwner() public view {
+        bytes32 message = keccak256("simple_plus_account");
+        bytes memory signature = abi.encodePacked(
+            SimplePlusAccount.SignatureType.EOA,
+            sign(EOA_PRIVATE_KEY, getMessageHash(address(account), abi.encode(message)))
+        );
+        assertEq(account.isValidSignature(message, signature), bytes4(keccak256("isValidSignature(bytes32,bytes)")));
     }
 
     function _transferOwnership(address currentOwner, address newOwner) internal {
