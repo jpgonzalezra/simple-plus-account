@@ -79,12 +79,27 @@ contract SimplePlusAccount is SimpleAccount, IERC1271, EIP712 {
     * - This function differs from `validateUserOp` in that it does **not** wrap the hash in an
     *   "Ethereum Signed Message" envelope before checking the signature for the EOA-owner case.
     */
-    function isValidSignature(bytes32 hash, bytes calldata signature) public view virtual returns (bytes4) {
+    function isValidSignature(bytes32 hash, bytes calldata _signature) public view virtual returns (bytes4) {
+        if (_signature.length == 0) {
+            revert InvalidSignatureType();
+        }
+
         bytes32 structHash = keccak256(abi.encode(_MESSAGE_TYPEHASH, keccak256(abi.encode(hash))));
         bytes32 replaySafeHash = MessageHashUtils.toTypedDataHash(_domainSeparatorV4(), structHash);
-        return _validateSignatureType(uint8(signature[0]), replaySafeHash, signature[1:]) == SIG_VALIDATION_SUCCESS
-            ? this.isValidSignature.selector
-            : bytes4(0xffffffff);
+
+        bytes memory signature = _signature[1:];
+        uint8 signatureType = uint8(_signature[0]);
+        if (signatureType == uint8(SignatureType.EOA)) {
+            return _validateEOASignature(replaySafeHash, signature) == SIG_VALIDATION_SUCCESS
+                ? this.isValidSignature.selector
+                : bytes4(0xffffffff);
+        } else if (signatureType == uint8(SignatureType.CONTRACT)) {
+            return _validateContractSignature(replaySafeHash, signature) == SIG_VALIDATION_SUCCESS
+                ? this.isValidSignature.selector
+                : bytes4(0xffffffff);
+        }
+
+        revert InvalidSignatureType();
     }
 
     function _validateSignature(
@@ -96,34 +111,23 @@ contract SimplePlusAccount is SimpleAccount, IERC1271, EIP712 {
         override
         returns (uint256 validationData)
     {
-        return _validateSignatureType(uint8(userOp.signature[0]), userOpHash, userOp.signature[1:]);
-    }
-
-    function _validateSignatureType(
-        uint8 signatureType,
-        bytes32 hash,
-        bytes memory signature
-    )
-        private
-        view
-        returns (uint256)
-    {
+        bytes memory signature = userOp.signature[1:];
         if (signature.length == 0) {
             revert InvalidSignatureType();
         }
 
+        uint8 signatureType = uint8(userOp.signature[0]);
         if (signatureType == uint8(SignatureType.EOA)) {
-            return _validateEOASignature(hash, signature);
+            return _validateEOASignature(userOpHash.toEthSignedMessageHash(), signature);
         } else if (signatureType == uint8(SignatureType.CONTRACT)) {
-            return _validateContractSignature(hash, signature);
+            return _validateContractSignature(userOpHash, signature);
         }
 
         revert InvalidSignatureType();
     }
 
-    function _validateEOASignature(bytes32 userOpHash, bytes memory signature) private view returns (uint256) {
-        bytes32 signedHash = userOpHash.toEthSignedMessageHash();
-        address recovered = signedHash.recover(signature);
+    function _validateEOASignature(bytes32 hash, bytes memory signature) private view returns (uint256) {
+        address recovered = hash.recover(signature);
         return recovered == owner ? SIG_VALIDATION_SUCCESS : SIG_VALIDATION_FAILED;
     }
 
