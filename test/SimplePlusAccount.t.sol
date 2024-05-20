@@ -149,6 +149,29 @@ contract SimplePlusAccountTest is AccountTest {
         assertEq(account.owner(), newOwner);
     }
 
+    function testSelfExecuteCanRecoverAccount() public {
+        uint256 nonce = account.getNonce(eoaAddress);
+        address newOwner = address(0x100);
+
+        bytes32 structHash = keccak256(abi.encode(account._RECOVER_TYPEHASH(), eoaAddress, newOwner, nonce));
+        bytes32 digest = MessageHashUtils.toTypedDataHash(domainSeparator(address(account)), structHash);
+        bytes memory signature = sign(GUARDIAN_PRIVATE_KEY, digest);
+
+        PackedUserOperation memory op = getSignedOp(
+            entryPoint,
+            uint8(SimplePlusAccount.SignatureType.EOA),
+            abi.encodeCall(
+                SimpleAccount.execute,
+                (address(account), 0, abi.encodeCall(SimpleGuardianModule.recoverAccount, (newOwner, nonce, signature)))
+            ),
+            EOA_PRIVATE_KEY,
+            address(account)
+        );
+        
+        _executeOperation(op);
+        assertEq(account.owner(), newOwner);
+    }
+
     function _transferOwnership(address currentOwner, address newOwner) internal {
         vm.prank(currentOwner);
         vm.expectEmit(true, true, false, false);
