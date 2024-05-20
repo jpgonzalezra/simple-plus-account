@@ -16,12 +16,16 @@ abstract contract SimpleGuardianModule {
     error InvalidNewOwner(address owner);
     error InvalidGuardian(address guardian);
     error InvalidGuardianSignature();
+    error NotGuardian();
+    error InvalidNonce();
 
     address public guardian;
     mapping(address => uint256) private _nonces;
 
     modifier onlyGuardian() {
-        require(msg.sender == guardian, "Not the guardian");
+        if (msg.sender != guardian) {
+            revert NotGuardian();
+        }
         _;
     }
 
@@ -33,7 +37,9 @@ abstract contract SimpleGuardianModule {
     }
 
     function _verifyAndConsumeNonce(address owner, uint256 nonde) internal virtual {
-        require(nonde == _nonces[owner]++, "invalid nonce");
+        if (nonde != _nonces[owner]++) {
+            revert InvalidNonce();
+        }
         emit NonceConsumed(owner, nonde);
     }
 
