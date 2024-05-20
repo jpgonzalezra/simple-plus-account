@@ -56,7 +56,7 @@ contract SimplePlusAccount is SimpleAccount, SimpleGuardianModule, IERC1271, EIP
     /// owner or from the entry point via a user operation signed by the current owner.
     /// @param newOwner The new owner.
     function transferOwnership(address newOwner) public {
-        require(_onlyAuthorized());
+        _onlyAuthorized();
         if (newOwner == address(0) || newOwner == address(this) || owner == newOwner) {
             revert InvalidOwner(newOwner);
         }
