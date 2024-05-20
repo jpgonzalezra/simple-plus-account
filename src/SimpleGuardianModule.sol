@@ -13,6 +13,7 @@ abstract contract SimpleGuardianModule {
     event NonceConsumed(address indexed owner, uint256 idx);
     event GuardianUpdated(address indexed previousGuardian, address indexed newGuardian);
 
+    error InvalidNewOwner(address owner);
     error InvalidGuardian(address guardian);
     error InvalidGuardianSignature();
 
@@ -26,8 +27,6 @@ abstract contract SimpleGuardianModule {
 
     /**
      * @notice Retuns a nonce for a given address.
-     * @param   from  Address.
-     * @return  uint256 Nonce Value.
      */
     function getNonce(address from) external view virtual returns (uint256) {
         return _nonces[from];
@@ -59,9 +58,9 @@ abstract contract SimpleGuardianModule {
     }
 
     function recoverAccount(address newOwner, uint256 nonce, bytes calldata signature) external {
-        require(
-            newOwner != address(0) && _owner() != newOwner && newOwner != address(this), "Invalid new owner address"
-        );
+        if (newOwner == address(0) || _owner() == newOwner || newOwner == address(this)) {
+            revert InvalidNewOwner(newOwner);
+        }
 
         _verifyAndConsumeNonce(newOwner, nonce);
         bytes32 structHash = keccak256(abi.encode(_RECOVER_TYPEHASH, _owner(), newOwner, nonce));

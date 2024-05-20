@@ -32,6 +32,7 @@ contract SimplePlusAccountTest is AccountTest {
         SimplePlusAccountFactory factory = new SimplePlusAccountFactory(entryPoint);
         account = factory.createAccount(eoaAddress, 1);
         vm.deal(address(account), 1 << 128);
+        emit GuardianUpdated(address(0), guardianAddress);
         account.initGuardian(guardianAddress);
     }
 
@@ -110,10 +111,7 @@ contract SimplePlusAccountTest is AccountTest {
      * Guardian test cases
      */
     function testGuardianCanTransferOwnership() public {
-        vm.prank(guardianAddress);
-        emit GuardianUpdated(address(0), guardianAddress);
         uint256 nonce = account.getNonce(eoaAddress);
-
         address newOwner = address(0x100);
         bytes32 structHash = keccak256(abi.encode(account._RECOVER_TYPEHASH(), eoaAddress, newOwner, nonce));
         bytes32 digest = MessageHashUtils.toTypedDataHash(domainSeparator(address(account)), structHash);
@@ -126,9 +124,19 @@ contract SimplePlusAccountTest is AccountTest {
         assertEq(account.owner(), newOwner);
     }
 
-    function testEntryPointExecutesRecoverAccountByGuardian() public {
-        vm.prank(guardianAddress);
+    function testGuardianCannotTransferOwnershipPerInvalidNewOwner() public {
+        uint256 nonce = account.getNonce(eoaAddress);
 
+        bytes32 structHash = keccak256(abi.encode(account._RECOVER_TYPEHASH(), eoaAddress, eoaAddress, nonce));
+        bytes32 digest = MessageHashUtils.toTypedDataHash(domainSeparator(address(account)), structHash);
+
+        bytes memory signature = sign(GUARDIAN_PRIVATE_KEY, digest);
+
+        vm.expectRevert(abi.encodeWithSelector(SimpleGuardianModule.InvalidNewOwner.selector, eoaAddress));
+        account.recoverAccount(eoaAddress, nonce, signature);
+    }
+
+    function testEntryPointExecutesRecoverAccountByGuardian() public {
         uint256 nonce = account.getNonce(eoaAddress);
         address newOwner = address(0x100);
 
