@@ -22,13 +22,6 @@ abstract contract SimpleGuardianModule {
     address public guardian;
     mapping(address => uint256) private _nonces;
 
-    modifier onlyGuardian() {
-        if (msg.sender != guardian) {
-            revert NotGuardian();
-        }
-        _;
-    }
-
     /**
      * @notice Retuns a nonce for a given address.
      */
@@ -49,7 +42,7 @@ abstract contract SimpleGuardianModule {
     }
 
     function updateGuardian(address newGuardian) external {
-        require(_onlyAuthorized(), "Not authorized");
+        _onlyAuthorized();
         _updateGuardian(newGuardian);
     }
 
