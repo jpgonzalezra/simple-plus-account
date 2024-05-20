@@ -2,7 +2,7 @@
 pragma solidity ^0.8.25;
 
 import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import { console2 } from "forge-std/src/console2.sol";
+// import { console2 } from "forge-std/src/console2.sol";
 
 abstract contract SimpleGuardianModule {
     using ECDSA for bytes32;
@@ -12,6 +12,9 @@ abstract contract SimpleGuardianModule {
 
     event NonceConsumed(address indexed owner, uint256 idx);
     event GuardianUpdated(address indexed previousGuardian, address indexed newGuardian);
+
+    error InvalidGuardian(address guardian);
+    error InvalidGuardianSignature();
 
     address public guardian;
     mapping(address => uint256) private _nonces;
@@ -46,10 +49,10 @@ abstract contract SimpleGuardianModule {
     }
 
     function _updateGuardian(address newGuardian) internal {
-        require(
-            newGuardian != address(0) && guardian != newGuardian && newGuardian != address(this),
-            "Invalid guardian address"
-        );
+        if (newGuardian == address(0) || guardian == newGuardian || newGuardian == address(this)) {
+            revert InvalidGuardian(newGuardian);
+        }
+
         address oldGuardian = guardian;
         guardian = newGuardian;
         emit GuardianUpdated(oldGuardian, newGuardian);
@@ -65,10 +68,10 @@ abstract contract SimpleGuardianModule {
         bytes32 digest = _hashTypedDataV4(structHash);
 
         address recoveredAddress = digest.recover(signature);
-        console2.log(guardian);
 
-
-        require(recoveredAddress == guardian, "Invalid guardian signature");
+        if (recoveredAddress != guardian) {
+            revert InvalidGuardianSignature();
+        }
 
         _transferOwnership(newOwner);
     }

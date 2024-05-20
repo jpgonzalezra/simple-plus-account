@@ -167,9 +167,21 @@ contract SimplePlusAccountTest is AccountTest {
             EOA_PRIVATE_KEY,
             address(account)
         );
-        
+
         _executeOperation(op);
         assertEq(account.owner(), newOwner);
+    }
+
+    function testRecoverAccountRevertsWithInvalidSignature() public {
+        uint256 nonce = account.getNonce(eoaAddress);
+
+        bytes32 structHash = keccak256(abi.encode(account._RECOVER_TYPEHASH(), eoaAddress, guardianAddress, nonce));
+        bytes32 digest = MessageHashUtils.toTypedDataHash(domainSeparator(address(account)), structHash);
+
+        bytes memory signature = sign(EOA_PRIVATE_KEY, digest);
+
+        vm.expectRevert(abi.encodeWithSelector(SimpleGuardianModule.InvalidGuardianSignature.selector));
+        account.recoverAccount(guardianAddress, nonce, signature);
     }
 
     function _transferOwnership(address currentOwner, address newOwner) internal {
