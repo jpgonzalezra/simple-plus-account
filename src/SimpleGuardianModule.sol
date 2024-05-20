@@ -18,6 +18,7 @@ abstract contract SimpleGuardianModule {
     error InvalidGuardianSignature();
     error NotGuardian();
     error InvalidNonce();
+    error GuardianAlreadyInitialized();
 
     address public guardian;
     mapping(address => uint256) private _nonces;
@@ -37,7 +38,9 @@ abstract contract SimpleGuardianModule {
     }
 
     function initGuardian(address newGuardian) external {
-        require(guardian == address(0));
+        if (guardian != address(0)) {
+            revert GuardianAlreadyInitialized();
+        }
         _updateGuardian(newGuardian);
     }
 
