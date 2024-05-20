@@ -36,11 +36,11 @@ abstract contract SimpleGuardianModule {
         return _nonces[from];
     }
 
-    function _verifyAndConsumeNonce(address owner, uint256 nonde) internal virtual {
-        if (nonde != _nonces[owner]++) {
+    function _verifyAndConsumeNonce(address owner, uint256 nonce) internal virtual {
+        if (nonce != _nonces[owner]++) {
             revert InvalidNonce();
         }
-        emit NonceConsumed(owner, nonde);
+        emit NonceConsumed(owner, nonce);
     }
 
     function initGuardian(address newGuardian) external {
@@ -73,7 +73,6 @@ abstract contract SimpleGuardianModule {
         bytes32 digest = _hashTypedDataV4(structHash);
 
         address recoveredAddress = digest.recover(signature);
-
         if (recoveredAddress != guardian) {
             revert InvalidGuardianSignature();
         }
