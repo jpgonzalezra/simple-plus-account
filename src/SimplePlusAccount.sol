@@ -10,7 +10,6 @@ import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import { IERC1271 } from "@openzeppelin/contracts/interfaces/IERC1271.sol";
 import { EIP712 } from "@openzeppelin/contracts/utils/cryptography/EIP712.sol"; // TODO: use upgradable version
 import { SimpleGuardianModule } from "./SimpleGuardianModule.sol";
-// import { console2 } from "forge-std/src/console2.sol";
 
 contract SimplePlusAccount is SimpleAccount, SimpleGuardianModule, IERC1271, EIP712 {
     using ECDSA for bytes32;
@@ -41,10 +40,12 @@ contract SimplePlusAccount is SimpleAccount, SimpleGuardianModule, IERC1271, EIP
         _initialize(anOwner);
     }
 
-    /// @dev Revert if the caller is not any of:
-    /// 1. The entry point
-    /// 2. The account itself (when redirected through `execute`, etc.)
-    /// 3. An owner
+    /**
+     * @dev  Revert if the caller is not any of:
+     *  1. The entry point
+     *  2. The account itself (when redirected through `execute`, etc.)
+     *  3. An owner
+     */
     function _onlyAuthorized() internal view virtual override returns (bool) {
         if (msg.sender != address(entryPoint()) && msg.sender != address(this) && msg.sender != owner) {
             revert NotAuthorized();
@@ -52,9 +53,11 @@ contract SimplePlusAccount is SimpleAccount, SimpleGuardianModule, IERC1271, EIP
         return true;
     }
 
-    /// @notice Transfers ownership of the contract to a new account (`newOwner`). Can only be called by the current
-    /// owner or from the entry point via a user operation signed by the current owner.
-    /// @param newOwner The new owner.
+    /**
+     * @notice Transfers ownership of the contract to a new account (`newOwner`). Can only be called by the current
+     *    owner or from the entry point via a user operation signed by the current owner.
+     * @param newOwner The new owner.
+     */
     function transferOwnership(address newOwner) public {
         _onlyAuthorized();
         if (newOwner == address(0) || newOwner == address(this) || owner == newOwner) {

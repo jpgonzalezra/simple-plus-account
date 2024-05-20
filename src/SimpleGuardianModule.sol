@@ -2,7 +2,6 @@
 pragma solidity ^0.8.25;
 
 import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-// import { console2 } from "forge-std/src/console2.sol";
 
 abstract contract SimpleGuardianModule {
     using ECDSA for bytes32;

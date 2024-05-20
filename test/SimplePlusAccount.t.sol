@@ -10,7 +10,6 @@ import { SimpleAccount } from "@account-abstraction/contracts/samples/SimpleAcco
 import { AccountTest } from "./AccountTest.sol";
 import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import { SimpleGuardianModule } from "../src/SimpleGuardianModule.sol";
-// import { console2 } from "forge-std/src/console2.sol";
 
 contract SimplePlusAccountTest is AccountTest {
     uint256 public constant EOA_PRIVATE_KEY = 1;
