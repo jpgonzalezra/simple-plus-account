@@ -2,7 +2,7 @@
 pragma solidity ^0.8.25;
 
 import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-// import { console2 } from "forge-std/src/console2.sol";
+import { console2 } from "forge-std/src/console2.sol";
 
 abstract contract SimpleGuardianModule {
     using ECDSA for bytes32;
@@ -65,6 +65,8 @@ abstract contract SimpleGuardianModule {
         bytes32 digest = _hashTypedDataV4(structHash);
 
         address recoveredAddress = digest.recover(signature);
+        console2.log(guardian);
+
 
         require(recoveredAddress == guardian, "Invalid guardian signature");
 

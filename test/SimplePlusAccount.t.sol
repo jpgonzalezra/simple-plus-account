@@ -9,6 +9,7 @@ import { EntryPoint } from "@account-abstraction/contracts/core/EntryPoint.sol";
 import { SimpleAccount } from "@account-abstraction/contracts/samples/SimpleAccount.sol";
 import { AccountTest } from "./AccountTest.sol";
 import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+import { SimpleGuardianModule } from "../src/SimpleGuardianModule.sol";
 // import { console2 } from "forge-std/src/console2.sol";
 
 contract SimplePlusAccountTest is AccountTest {
@@ -31,6 +32,7 @@ contract SimplePlusAccountTest is AccountTest {
         SimplePlusAccountFactory factory = new SimplePlusAccountFactory(entryPoint);
         account = factory.createAccount(eoaAddress, 1);
         vm.deal(address(account), 1 << 128);
+        account.initGuardian(guardianAddress);
     }
 
     /**
@@ -104,10 +106,12 @@ contract SimplePlusAccountTest is AccountTest {
         assertEq(account.isValidSignature(message, signature), bytes4(keccak256("isValidSignature(bytes32,bytes)")));
     }
 
+    /**
+     * Guardian test cases
+     */
     function testGuardianCanTransferOwnership() public {
         vm.prank(guardianAddress);
         emit GuardianUpdated(address(0), guardianAddress);
-        account.initGuardian(guardianAddress);
         uint256 nonce = account.getNonce(eoaAddress);
 
         address newOwner = address(0x100);
@@ -119,6 +123,29 @@ contract SimplePlusAccountTest is AccountTest {
         vm.expectEmit(true, true, false, false);
         emit OwnershipTransferred(eoaAddress, newOwner);
         account.recoverAccount(newOwner, nonce, signature);
+        assertEq(account.owner(), newOwner);
+    }
+
+    function testEntryPointExecutesRecoverAccountByGuardian() public {
+        vm.prank(guardianAddress);
+
+        uint256 nonce = account.getNonce(eoaAddress);
+        address newOwner = address(0x100);
+
+        bytes32 structHash = keccak256(abi.encode(account._RECOVER_TYPEHASH(), eoaAddress, newOwner, nonce));
+        bytes32 digest = MessageHashUtils.toTypedDataHash(domainSeparator(address(account)), structHash);
+        bytes memory signature = sign(GUARDIAN_PRIVATE_KEY, digest);
+
+        PackedUserOperation memory op = getSignedOp(
+            entryPoint,
+            uint8(SimplePlusAccount.SignatureType.EOA),
+            abi.encodeCall(SimpleGuardianModule.recoverAccount, (newOwner, nonce, signature)),
+            EOA_PRIVATE_KEY,
+            address(account)
+        );
+
+        _executeOperation(op);
+
         assertEq(account.owner(), newOwner);
     }
 
