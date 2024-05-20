@@ -8,7 +8,7 @@ import { SignatureChecker } from "@openzeppelin/contracts/utils/cryptography/Sig
 import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import { IERC1271 } from "@openzeppelin/contracts/interfaces/IERC1271.sol";
-import { EIP712 } from "@openzeppelin/contracts/utils/cryptography/EIP712.sol"; // TODO: use upgradable version
+import { EIP712 } from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import { SimpleGuardianModule } from "./SimpleGuardianModule.sol";
 
 contract SimplePlusAccount is SimpleAccount, SimpleGuardianModule, IERC1271, EIP712 {
