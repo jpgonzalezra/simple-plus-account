@@ -210,6 +210,40 @@ contract SimplePlusAccountTest is AccountTest {
         account.recoverAccount(address(0x101), nonce, signature);
     }
 
+    function testOwnerCanUpdateGuardian() public {
+        vm.prank(eoaAddress);
+
+        address newGuardian = address(0x200);
+
+        vm.expectEmit(true, true, false, false);
+        emit GuardianUpdated(guardianAddress, newGuardian);
+        account.updateGuardian(newGuardian);
+        assertEq(account.guardian(), newGuardian);
+    }
+
+    function testNonOwnerCannotUpdateGuardian() public {
+        vm.prank(address(0x300));
+        vm.expectRevert(abi.encodeWithSelector(SimplePlusAccount.NotAuthorized.selector));
+        account.updateGuardian(address(0x200));
+    }
+
+    function testUpdateGuardianToInvalidAddress() public {
+        vm.prank(eoaAddress);
+
+        address invalidGuardian = address(0);
+        vm.expectRevert(abi.encodeWithSelector(SimpleGuardianModule.InvalidGuardian.selector, address(0)));
+
+        account.updateGuardian(invalidGuardian);
+    }
+
+    function testGuardianCannotUpdateGuardian() public {
+        vm.prank(guardianAddress);
+
+        address newGuardian = address(0x200);
+        vm.expectRevert(abi.encodeWithSelector(SimplePlusAccount.NotAuthorized.selector));
+        account.updateGuardian(newGuardian);
+    }
+
     function _transferOwnership(address currentOwner, address newOwner) internal {
         vm.prank(currentOwner);
         vm.expectEmit(true, true, false, false);
