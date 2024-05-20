@@ -9,17 +9,14 @@ import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/Mes
 import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import { IERC1271 } from "@openzeppelin/contracts/interfaces/IERC1271.sol";
 import { EIP712 } from "@openzeppelin/contracts/utils/cryptography/EIP712.sol"; // TODO: use upgradable version
+import { SimpleGuardianModule } from "./SimpleGuardianModule.sol";
+// import { console2 } from "forge-std/src/console2.sol";
 
-contract SimplePlusAccount is SimpleAccount, IERC1271, EIP712 {
+contract SimplePlusAccount is SimpleAccount, SimpleGuardianModule, IERC1271, EIP712 {
     using ECDSA for bytes32;
     using MessageHashUtils for bytes32;
 
-    bytes32 internal constant _MESSAGE_TYPEHASH = keccak256("SimplePlusAccount(bytes message)");
-
-    modifier onlyAuthorized() {
-        _onlyAuthorized();
-        _;
-    }
+    bytes32 public constant _MESSAGE_TYPEHASH = keccak256("SimplePlusAccount(bytes message)");
 
     // @notice Signature types used for user operation validation and ERC-1271 signature validation.
     enum SignatureType {
@@ -48,16 +45,18 @@ contract SimplePlusAccount is SimpleAccount, IERC1271, EIP712 {
     /// 1. The entry point
     /// 2. The account itself (when redirected through `execute`, etc.)
     /// 3. An owner
-    function _onlyAuthorized() internal view {
+    function _onlyAuthorized() internal view virtual override returns (bool) {
         if (msg.sender != address(entryPoint()) && msg.sender != address(this) && msg.sender != owner) {
             revert NotAuthorized();
         }
+        return true;
     }
 
     /// @notice Transfers ownership of the contract to a new account (`newOwner`). Can only be called by the current
     /// owner or from the entry point via a user operation signed by the current owner.
     /// @param newOwner The new owner.
-    function transferOwnership(address newOwner) external onlyAuthorized {
+    function transferOwnership(address newOwner) public {
+        require(_onlyAuthorized());
         if (newOwner == address(0) || newOwner == address(this) || owner == newOwner) {
             revert InvalidOwner(newOwner);
         }
@@ -80,62 +79,80 @@ contract SimplePlusAccount is SimpleAccount, IERC1271, EIP712 {
     *   "Ethereum Signed Message" envelope before checking the signature for the EOA-owner case.
     */
     function isValidSignature(bytes32 hash, bytes calldata _signature) public view virtual returns (bytes4) {
-    if (_signature.length == 0) {
-        revert InvalidSignatureType();
+        if (_signature.length == 0) {
+            revert InvalidSignatureType();
+        }
+
+        bytes32 structHash = keccak256(abi.encode(_MESSAGE_TYPEHASH, keccak256(abi.encode(hash))));
+        bytes32 replaySafeHash = MessageHashUtils.toTypedDataHash(_domainSeparatorV4(), structHash);
+
+        return _validateSignatureWithType(uint8(_signature[0]), replaySafeHash, _signature[1:])
+            ? this.isValidSignature.selector
+            : bytes4(0xffffffff);
     }
 
-    bytes32 structHash = keccak256(abi.encode(_MESSAGE_TYPEHASH, keccak256(abi.encode(hash))));
-    bytes32 replaySafeHash = MessageHashUtils.toTypedDataHash(_domainSeparatorV4(), structHash);
+    function _validateSignature(
+        PackedUserOperation calldata userOp,
+        bytes32 userOpHash
+    )
+        internal
+        virtual
+        override
+        returns (uint256 validationData)
+    {
+        if (userOp.signature.length == 0) {
+            revert InvalidSignatureType();
+        }
 
-    return _validateSignatureWithType(uint8(_signature[0]), replaySafeHash, _signature[1:])
-        ? this.isValidSignature.selector
-        : bytes4(0xffffffff);
-}
-
-function _validateSignature(
-    PackedUserOperation calldata userOp,
-    bytes32 userOpHash
-)
-    internal
-    virtual
-    override
-    returns (uint256 validationData)
-{
-    if (userOp.signature.length == 0) {
-        revert InvalidSignatureType();
+        return _validateSignatureWithType(
+            uint8(userOp.signature[0]), userOpHash.toEthSignedMessageHash(), userOp.signature[1:]
+        ) ? SIG_VALIDATION_SUCCESS : SIG_VALIDATION_FAILED;
     }
 
-    return _validateSignatureWithType(uint8(userOp.signature[0]), userOpHash.toEthSignedMessageHash(), userOp.signature[1:])
-        ? SIG_VALIDATION_SUCCESS
-        : SIG_VALIDATION_FAILED;
-}
-
-function _validateSignatureWithType(
-    uint8 signatureType,
-    bytes32 hash,
-    bytes memory signature
-)
-    private
-    view
-    returns (bool)
-{
-    if (signatureType == uint8(SignatureType.EOA)) {
-        return _validateEOASignature(hash, signature) == SIG_VALIDATION_SUCCESS;
-    } else if (signatureType == uint8(SignatureType.CONTRACT)) {
-        return _validateContractSignature(hash, signature) == SIG_VALIDATION_SUCCESS;
-    } else {
-        revert InvalidSignatureType();
+    function _validateSignatureWithType(
+        uint8 signatureType,
+        bytes32 hash,
+        bytes memory signature
+    )
+        private
+        view
+        returns (bool)
+    {
+        if (signatureType == uint8(SignatureType.EOA)) {
+            return _validateEOASignature(hash, signature) == SIG_VALIDATION_SUCCESS;
+        } else if (signatureType == uint8(SignatureType.CONTRACT)) {
+            return _validateContractSignature(hash, signature) == SIG_VALIDATION_SUCCESS;
+        } else {
+            revert InvalidSignatureType();
+        }
     }
-}
 
-function _validateEOASignature(bytes32 hash, bytes memory signature) private view returns (uint256) {
-    address recovered = hash.recover(signature);
-    return recovered == owner ? SIG_VALIDATION_SUCCESS : SIG_VALIDATION_FAILED;
-}
+    function _validateEOASignature(bytes32 hash, bytes memory signature) private view returns (uint256) {
+        address recovered = hash.recover(signature);
+        return recovered == owner ? SIG_VALIDATION_SUCCESS : SIG_VALIDATION_FAILED;
+    }
 
-function _validateContractSignature(bytes32 userOpHash, bytes memory signature) private view returns (uint256) {
-    return SignatureChecker.isValidERC1271SignatureNow(owner, userOpHash, signature)
-        ? SIG_VALIDATION_SUCCESS
-        : SIG_VALIDATION_FAILED;
-}
+    function _validateContractSignature(bytes32 userOpHash, bytes memory signature) private view returns (uint256) {
+        return SignatureChecker.isValidERC1271SignatureNow(owner, userOpHash, signature)
+            ? SIG_VALIDATION_SUCCESS
+            : SIG_VALIDATION_FAILED;
+    }
+
+    function _transferOwnership(address newOwner) internal virtual override {
+        this.transferOwnership(newOwner);
+    }
+
+    function _hashTypedDataV4(bytes32 structHash)
+        internal
+        view
+        virtual
+        override(EIP712, SimpleGuardianModule)
+        returns (bytes32)
+    {
+        return super._hashTypedDataV4(structHash);
+    }
+
+    function _owner() internal view virtual override returns (address) {
+        return owner;
+    }
 }
