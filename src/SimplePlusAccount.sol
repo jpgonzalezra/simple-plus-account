@@ -11,6 +11,11 @@ import { IERC1271 } from "@openzeppelin/contracts/interfaces/IERC1271.sol";
 import { EIP712 } from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import { SimpleGuardianModule } from "./modules/SimpleGuardianModule.sol";
 
+/**
+ * @title SimplePlusAccount
+ * @notice A version of SimpleAccount with additional features like ownership transfer and External Wallet (guardian)
+ * Recovery.
+ */
 contract SimplePlusAccount is SimpleAccount, SimpleGuardianModule, IERC1271, EIP712 {
     using ECDSA for bytes32;
     using MessageHashUtils for bytes32;
@@ -29,33 +34,26 @@ contract SimplePlusAccount is SimpleAccount, SimpleGuardianModule, IERC1271, EIP
 
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
+    /**
+     * @notice Constructor for SimplePlusAccount.
+     * @param anEntryPoint The entry point address.
+     */
     constructor(IEntryPoint anEntryPoint) SimpleAccount(anEntryPoint) EIP712("SimplePlusAccount", "1") { }
 
     /**
+     * @notice Initializes the contract.
      * @dev The _entryPoint member is immutable, to reduce gas consumption.  To upgrade EntryPoint,
      * a new implementation of SimpleAccount must be deployed with the new EntryPoint address, then upgrading
      * the implementation by calling `upgradeTo()`
+     * @param anOwner The initial owner address.
      */
     function initialize(address anOwner) public virtual override initializer {
         _initialize(anOwner);
     }
 
     /**
-     * @dev  Revert if the caller is not any of:
-     *  1. The entry point
-     *  2. The account itself (when redirected through `execute`, etc.)
-     *  3. An owner
-     */
-    function _onlyAuthorized() internal view virtual override returns (bool) {
-        if (msg.sender != address(entryPoint()) && msg.sender != address(this) && msg.sender != owner) {
-            revert NotAuthorized();
-        }
-        return true;
-    }
-
-    /**
      * @notice Transfers ownership of the contract to a new account (`newOwner`). Can only be called by the current
-     *    owner or from the entry point via a user operation signed by the current owner.
+     * owner or from the entry point via a user operation signed by the current owner.
      * @param newOwner The new owner.
      */
     function transferOwnership(address newOwner) public {
@@ -94,6 +92,29 @@ contract SimplePlusAccount is SimpleAccount, SimpleGuardianModule, IERC1271, EIP
             : bytes4(0xffffffff);
     }
 
+    ////////////////////////
+    // Internal Functions //
+    ////////////////////////
+
+    /**
+     * @dev  Revert if the caller is not any of:
+     *  1. The entry point
+     *  2. The account itself (when redirected through `execute`, etc.)
+     *  3. An owner
+     */
+    function _onlyAuthorized() internal view virtual override returns (bool) {
+        if (msg.sender != address(entryPoint()) && msg.sender != address(this) && msg.sender != owner) {
+            revert NotAuthorized();
+        }
+        return true;
+    }
+
+    /**
+     * @dev Validates the signature of a user operation.
+     * @param userOp The user operation to be validated.
+     * @param userOpHash The hash of the user operation.
+     * @return validationData The validation data.
+     */
     function _validateSignature(
         PackedUserOperation calldata userOp,
         bytes32 userOpHash
@@ -112,12 +133,19 @@ contract SimplePlusAccount is SimpleAccount, SimpleGuardianModule, IERC1271, EIP
         ) ? SIG_VALIDATION_SUCCESS : SIG_VALIDATION_FAILED;
     }
 
+    /**
+     * @notice Validates a signature with a specified type.
+     * @param signatureType The type of the signature.
+     * @param hash The hash of the data to be signed.
+     * @param signature The signature to be validated.
+     * @return True if the signature is valid, otherwise false.
+     */
     function _validateSignatureWithType(
         uint8 signatureType,
         bytes32 hash,
         bytes memory signature
     )
-        private
+        internal
         view
         returns (bool)
     {
@@ -130,21 +158,42 @@ contract SimplePlusAccount is SimpleAccount, SimpleGuardianModule, IERC1271, EIP
         }
     }
 
-    function _validateEOASignature(bytes32 hash, bytes memory signature) private view returns (uint256) {
+    /**
+     * @notice Validates an EOA signature.
+     * @param hash The hash of the data to be signed.
+     * @param signature The signature to be validated.
+     * @return The validation status.
+     */
+    function _validateEOASignature(bytes32 hash, bytes memory signature) internal view returns (uint256) {
         address recovered = hash.recover(signature);
         return recovered == owner ? SIG_VALIDATION_SUCCESS : SIG_VALIDATION_FAILED;
     }
 
-    function _validateContractSignature(bytes32 userOpHash, bytes memory signature) private view returns (uint256) {
+    /**
+     * @notice Validates a contract signature.
+     * @param userOpHash The hash of the user operation.
+     * @param signature The signature to be validated.
+     * @return The validation status.
+     */
+    function _validateContractSignature(bytes32 userOpHash, bytes memory signature) internal view returns (uint256) {
         return SignatureChecker.isValidERC1271SignatureNow(owner, userOpHash, signature)
             ? SIG_VALIDATION_SUCCESS
             : SIG_VALIDATION_FAILED;
     }
 
+    /**
+     * @notice Transfers the ownership of the contract to a new owner.
+     * @param newOwner The address of the new owner.
+     */
     function _transferOwnership(address newOwner) internal virtual override {
         this.transferOwnership(newOwner);
     }
 
+    /**
+     * @notice Hashes the typed data.
+     * @param structHash The struct hash to be hashed.
+     * @return The hashed typed data.
+     */
     function _hashTypedDataV4(bytes32 structHash)
         internal
         view
@@ -155,6 +204,10 @@ contract SimplePlusAccount is SimpleAccount, SimpleGuardianModule, IERC1271, EIP
         return super._hashTypedDataV4(structHash);
     }
 
+    /**
+     * @notice Returns the owner of the contract.
+     * @return The address of the owner.
+     */
     function _owner() internal view virtual override returns (address) {
         return owner;
     }

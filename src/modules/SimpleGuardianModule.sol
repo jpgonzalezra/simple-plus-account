@@ -79,8 +79,8 @@ abstract contract SimpleGuardianModule {
     }
 
     ////////////////////////
-    // Internals function //
-    ///////////////////////
+    // Internal Functions //
+    ////////////////////////
 
     /**
      * @notice Verifies and consumes a nonce for a given owner.
