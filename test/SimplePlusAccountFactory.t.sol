@@ -31,7 +31,4 @@ contract SimplePlusAccountFactoryTest is Test {
         assertTrue(address(factual).codehash != bytes32(0));
         assertEq(counterfactual, address(factual));
     }
-
-    /// @dev Receive funds from withdraw.
-    receive() external payable { }
 }
