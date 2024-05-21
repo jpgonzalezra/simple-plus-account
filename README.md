@@ -1,15 +1,24 @@
-# Foundry Template [![Open in Gitpod][gitpod-badge]][gitpod] [![Github Actions][gha-badge]][gha] [![Foundry][foundry-badge]][foundry] [![License: MIT][license-badge]][license]
+# Simple Plus Account [![Open in Gitpod][gitpod-badge]][gitpod] [![Github Actions][gha-badge]][gha] [![Foundry][foundry-badge]][foundry] [![License: MIT][license-badge]][license]
 
-[gitpod]: https://gitpod.io/#https://github.com/jpgonzalezra/jff-account-abstraction
+[gitpod]: https://gitpod.io/#https://github.com/jpgonzalezra/simple-plus-account
 [gitpod-badge]: https://img.shields.io/badge/Gitpod-Open%20in%20Gitpod-FFB45B?logo=gitpod
-[gha]: https://github.com/jpgonzalezra/jff-account-abstraction/actions
-[gha-badge]: https://github.com/jpgonzalezra/jff-account-abstraction/actions/workflows/ci.yml/badge.svg
+[gha]: https://github.com/jpgonzalezra/simple-plus-account/actions
+[gha-badge]: https://github.com/jpgonzalezra/simple-plus-account/actions/workflows/ci.yml/badge.svg
 [foundry]: https://getfoundry.sh/
 [foundry-badge]: https://img.shields.io/badge/Built%20with-Foundry-FFDB1C.svg
 [license]: https://opensource.org/licenses/MIT
 [license-badge]: https://img.shields.io/badge/License-MIT-blue.svg
 
-A Foundry-based template for developing Solidity smart contracts, with sensible defaults.
+Exploring innovative features with abstract account wallets, also known as smart wallets.
+
+## Features
+
+Building on the foundation of eth-infinitism's SimpleAccount, Simple Plus Account introduces the following enhancements:
+
+- Ownership Transfer: Easily transfer ownership of the smart wallet to another address.
+- External Wallet Recovery: Securely recover the wallet using a predefined guardian address.
+- Proof of Life: (Coming Soon) Implement proof of life mechanisms to enhance security and control.
+- Multiple External Wallet Recovery: (Coming Soon) Support for multiple guardian addresses for wallet recovery.
 
 ## What's Inside
 
