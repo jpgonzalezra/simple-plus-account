@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.25;
 
-import "forge-std/src/Test.sol";
+import { Test } from "forge-std/src/Test.sol";
 
 import { PackedUserOperation } from "@account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 import { EntryPoint } from "@account-abstraction/contracts/core/EntryPoint.sol";
