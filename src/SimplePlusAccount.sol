@@ -9,7 +9,7 @@ import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/Mes
 import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import { IERC1271 } from "@openzeppelin/contracts/interfaces/IERC1271.sol";
 import { EIP712 } from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
-import { SimpleGuardianModule } from "./SimpleGuardianModule.sol";
+import { SimpleGuardianModule } from "./modules/SimpleGuardianModule.sol";
 
 contract SimplePlusAccount is SimpleAccount, SimpleGuardianModule, IERC1271, EIP712 {
     using ECDSA for bytes32;

@@ -8,7 +8,7 @@ import { EntryPoint } from "@account-abstraction/contracts/core/EntryPoint.sol";
 import { SimpleAccount } from "@account-abstraction/contracts/samples/SimpleAccount.sol";
 import { AccountTest } from "./AccountTest.sol";
 import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
-import { SimpleGuardianModule } from "../src/SimpleGuardianModule.sol";
+import { SimpleGuardianModule } from "../src/modules/SimpleGuardianModule.sol";
 
 contract SimplePlusAccountTest is AccountTest {
     uint256 public constant EOA_PRIVATE_KEY = 1;
