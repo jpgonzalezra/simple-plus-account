@@ -4,8 +4,9 @@ pragma solidity ^0.8.25;
 import { Script, console } from "forge-std/src/Script.sol";
 import { EntryPoint } from "@account-abstraction/contracts/core/EntryPoint.sol";
 import { SimplePlusAccountFactory } from "../src/SimplePlusAccountFactory.sol";
+import { BaseScript } from "./Base.s.sol";
 
-contract DeploySimplePlusAccountFactory is Script {
+contract DeploySimplePlusAccountFactory is BaseScript {
     // Load entrypoint from env
     address public entryPointAddr = vm.envAddress("ENTRYPOINT");
     EntryPoint public entryPoint = EntryPoint(payable(entryPointAddr));
